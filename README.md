@@ -9,6 +9,7 @@ With terraform I don't have to preconfigured template VM nor create separated ta
    - pre-configured static IP reachable from Ansible control node
    - openssh-server is installed and enabled
    - SSH user is created and added to suoers list
+   - Python 3.5 or higher is installed at VM
 
 2. Update the inventory.yaml file
    
@@ -18,7 +19,7 @@ With terraform I don't have to preconfigured template VM nor create separated ta
 3. SSH keypair is generated at Ansible control node
    This key will be used to create passwordless SSH connection to VM. 
 
-## Playbook flow
+## Playbook Flow
 
 1. Create VM from template using "Clone VM & Start VM" task
    

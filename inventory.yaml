@@ -1,0 +1,27 @@
+# https://docs.ansible.com/ansible/latest/network/getting_started/first_inventory.html
+---
+
+all:
+  hosts:
+    pve:
+      ansible_host: 192.168.0.2
+      ansible_user: root
+    vm1:
+      vmid: 8090
+      vmname: "openstack-ctl"
+      templateid: 601
+      ansible_host: 192.168.0.21 
+      defaultip: 192.168.0.10
+      ansible_user: username
+  vars:
+    ansible_user: username
+    ansible_python_interpreter: /usr/bin/python3
+
+  children:
+    proxmox:
+      hosts:
+        pve:
+
+    vms:
+      hosts:
+        vm1:

@@ -1,0 +1,89 @@
+- hosts: pve
+  gather_facts: no
+  remote_user: root
+  tasks:
+  - name: Debug hostvars
+    debug:
+      msg: "{{ hostvars[item].vmname }}"
+    loop: "{{ groups['vms'] }}"  
+  - name: Clone VM & Start VM
+    ansible.builtin.shell: |  
+      qm clone {{ hostvars[item].templateid }} {{ hostvars[item].vmid }} --name {{ hostvars[item].vmname }}
+      qm start {{ hostvars[item].vmid }}
+    loop: "{{ groups['vms'] }}"
+    when: hostvars[item].vmid is defined and hostvars[item].vmname is defined and hostvars[item].templateid is defined
+
+- hosts: localhost
+  gather_facts: no
+  tasks:
+  - name: wait for vm
+    wait_for:
+      host: "{{ hostvars[item].defaultip }}"
+      port: 22
+      delay: 1
+      timeout: 20
+      state: started
+    loop: "{{ groups['vms'] }}"
+  - name: ssh-copy
+    ansible.builtin.shell: |  
+      set timeout 300
+      spawn ssh -o StrictHostKeyChecking=no -f user@{{ hostvars[item].defaultip }} "chmod 700 /home/user/.ssh" 
+      expect "password:"
+      send "user1\n"      
+      expect "\$ " 
+      spawn ssh -o StrictHostKeyChecking=no -f user@{{ hostvars[item].defaultip }} "chmod 600 /home/user/.ssh/authorized_keys" 
+      expect "password:"
+      send "user1\n"      
+      expect "\$ " 
+      spawn ssh-copy-id -o StrictHostKeyChecking=no -f user@{{ hostvars[item].defaultip }}
+      expect "password:"
+      send "user1\n"      
+      expect "\$ " 
+      send "echo;\n"            
+    args:
+      executable: /usr/bin/expect
+    loop: "{{ groups['vms'] }}"
+
+
+- hosts: pve
+  gather_facts: no
+  become: true
+  user: user
+  tasks:
+  - name: Debug hostvars
+    debug:
+      msg: "{{ hostvars[item].vmname }}"
+    loop: "{{ groups['vms'] }}"
+  - name: Update OAM IP 
+    replace:
+      path: /etc/netplan/01-netcfg.yaml
+      regexp: "{{ hostvars[item].defaultip }}"
+      replace: "{{ hostvars[item].ansible_host }}"
+    delegate_to: "{{ hostvars[item].defaultip }}"
+    loop: "{{ groups['vms'] }}"
+  - name: Apply network config
+    shell: netplan apply
+    args:
+      executable: /bin/bash
+    delegate_to: "{{ hostvars[item].defaultip }}"
+    loop: "{{ groups['vms'] }}"
+    async: 5
+    poll: 0
+
+- hosts: vms
+  gather_facts: no
+  become: true
+  user: user
+  tasks:
+  - name: Set the hostname
+    ansible.builtin.hostname:
+      name: "{{ hostvars[inventory_hostname].vmname }}"
+  - name: Install qemu-guest-agent
+    ansible.builtin.apt:
+      name: qemu-guest-agent
+      state: present
+  - name: Enable and Start qemu-guest-agent service
+    systemd_service:
+      name: qemu-guest-agent.service
+      enabled: true
+      state: started

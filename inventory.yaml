@@ -7,9 +7,9 @@ all:
       ansible_host: 192.168.0.2
       ansible_user: root
     vm1:
-      vmid: 8090
-      vmname: "openstack-ctl"
-      templateid: 601
+      vmid: 101
+      vmname: "ubuntu-vm"
+      templateid: 100
       ansible_host: 192.168.0.21 
       defaultip: 192.168.0.10
       ansible_user: username
